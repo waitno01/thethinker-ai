@@ -1,0 +1,18 @@
+{
+  "name": "thethinker",
+  "version": "0.1.0",
+  "description": "Multi-agent think tank — agents discuss freely and bookmark discoveries",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "once": "node index.js --once",
+    "review": "node src/server.js",
+    "wipe": "node scripts/wipe.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "openai": "^4.77.0"
+  }
+}
