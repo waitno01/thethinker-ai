@@ -19,6 +19,7 @@ function sleep(ms) {
 }
 
 function ensureOpener(state) {
+  if (!config.seedOpener) return;
   if (state.turn !== 0 || readRecentMessages(1).length > 0) return;
   const opener = {
     id: `seed-${Date.now()}`,
@@ -47,13 +48,13 @@ export async function runTurn(state) {
     ownInitial: agent.initial,
   });
 
-  if (!content) {
-    log.skip(agent.initial, "meta or cut off");
-    state.turn += 1;
-    state.agentIndex = (state.agentIndex + 1) % agents.length;
-    saveState(state);
-    return null;
-  }
+    if (!content) {
+      log.skip(agent.initial, "unusable reply");
+      state.turn += 1;
+      state.agentIndex = (state.agentIndex + 1) % agents.length;
+      saveState(state);
+      return null;
+    }
 
   const message = {
     id: `${Date.now()}-${agent.id}`,
@@ -93,11 +94,13 @@ export async function runLoop({ once = false } = {}) {
   const state = loadState();
   if (state.turn === 0 && !state.startedAt) {
     state.startedAt = new Date().toISOString();
-    log.info(`Starting salon — ${agents.length} minds`);
+    log.info(`Starting salon — ${agents.length} minds, free (no system prompt)`);
     log.info(`Legend: ${formatAgentLegend(agents)}`);
     if (config.curatorEnabled) {
       log.info(`Observer → ${config.curatorModel} (monitor only)`);
     }
+    if (config.mechanicalPrompt) log.info("Mechanical prompt: ON");
+    if (config.seedOpener) log.info("Seed opener: ON");
     saveState(state);
   } else {
     log.info(`Resuming salon — turn ${state.turn}`);

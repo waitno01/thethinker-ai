@@ -5,14 +5,13 @@ function shortModelName(model) {
   return tail.length > 28 ? `${tail.slice(0, 28)}…` : tail;
 }
 
-function agentInitial(index) {
-  return String.fromCharCode(65 + (index % 26));
-}
+/** Anonymous callsigns — words, not letters (letters trigger stock-ticker completion). */
+const CALLSIGNS = ["Mira", "Kade", "Oren", "Lys", "Vesper", "Quill", "Nox", "Ivy"];
 
 export function buildAgents() {
   return config.agentModels.map((model, i) => ({
     id: `agent-${i + 1}`,
-    initial: agentInitial(i),
+    initial: CALLSIGNS[i % CALLSIGNS.length],
     name: shortModelName(model),
     model,
   }));
@@ -95,6 +94,44 @@ const META_PATTERNS = [
   /yes, that'?s a/i,
   /^absolutely!$/i,
   /challenges the traditional reading/i,
+  // Letter/ticker quiz mode (A — Apple, B — Boeing…)
+  /stock market ticker/i,
+  /ticker symbol/i,
+  /which represents\b/i,
+  /\bAAPL\b|\bNASDAQ\b|\bNYSE\b/i,
+  /on the stock market/i,
+  /here is why:/i,
+  /^\*? ?\*?\*?the stock market/i,
+  // Debate / tutor mode
+  /i'?d respectfully push back/i,
+  /scientific evidence/i,
+  /critical thinking/i,
+  /no scientific evidence/i,
+  /applying a critical/i,
+  /emphasizing the importance/i,
+  /evidence-based/i,
+  /this is actually \*\*true\*\*/i,
+  /this is actually true/i,
+  /common belief/i,
+  /subjective nature of/i,
+  /objective reality/i,
+  /this seems to be a joke/i,
+  /pop culture reference/i,
+  /cryptic message/i,
+  /let'?s (break|piece) (it|this) down/i,
+  /puzzle-?solving/i,
+  /group chat/i,
+  /possible interpretations/i,
+  /key contextual clues/i,
+  /harry potter/i,
+  /horcrux/i,
+  /i'?m listening/i,
+  /tell me more about/i,
+  /i'?d love to hear more/i,
+  /you'?re describing a moment/i,
+  /open-ended inquiry/i,
+  /second step:/i,
+  /finally, someone who'?s willing/i,
 ];
 
 export function clipLine(text, max = config.maxContextLineChars) {
@@ -105,7 +142,7 @@ export function clipLine(text, max = config.maxContextLineChars) {
   return (sp > 20 ? cut.slice(0, sp) : cut).trim() + "…";
 }
 
-/** Only the last clean line — stops multi-voice "analyze letters A–F" mode. */
+/** Only clean recent lines. */
 export function filterContextMessages(messages) {
   return messages
     .filter((m) => m.content && m.content !== "…" && m.content.length >= config.minReplyChars)
@@ -120,27 +157,32 @@ export function isEcho(text, priorMessages) {
   );
 }
 
-export function sanitizeReply(text, ownInitial) {
+export function sanitizeReply(text, ownLabel) {
   let s = text.replace(/\s+/g, " ").trim();
   s = s.replace(/^#+\s*/g, "");
   s = s.replace(/\s*#+\s*/g, " ");
   s = s.replace(/^["']+|["']+$/g, "");
+  s = s.replace(/^\*{1,2}/g, "").replace(/\*{1,2}$/g, "");
   s = s.replace(/^[A-Z]:\s*/, "");
-  if (ownInitial) {
-    const re = new RegExp(`^${ownInitial}\\s*[—–:-]\\s*`, "i");
+  if (ownLabel) {
+    const escaped = ownLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`^${escaped}\\s*[—–:-]\\s*`, "i");
     s = s.replace(re, "");
   }
   return s.trim();
 }
 
-export function extractCompletion(raw, ownInitial) {
-  let s = sanitizeReply(raw, ownInitial);
+export function extractCompletion(raw, ownLabel, otherLabels = []) {
+  let s = sanitizeReply(raw, ownLabel);
 
-  // Stop if model hallucinates the next speaker
-  const next = s.search(/\s[A-Z]\s*[—–:-]\s/);
-  if (next > 0) s = s.slice(0, next).trim();
+  for (const label of otherLabels) {
+    if (!label || label === ownLabel) continue;
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`\\s${escaped}\\s*[—–:]\\s`);
+    const hit = s.search(re);
+    if (hit > 0) s = s.slice(0, hit).trim();
+  }
 
-  // Keep up to 3 sentences (or whatever fits under maxReplyChars)
   const sentences = [];
   const re = /[^.!?]+[.!?]+/g;
   let m;
@@ -179,19 +221,17 @@ export function isUsableReply(text, { allowShort = false } = {}) {
   return true;
 }
 
-/** Prior lines only — current speaker completes via assistant prefill. */
 export function formatPriorLines(messages) {
   return messages
-    .map((m) => `${m.initial} — ${clipLine(m.content)}`)
+    .map((m) => `${m.initial}: ${clipLine(m.content)}`)
     .join("\n");
 }
 
-/** Full transcript for Observer (more lines, slightly longer clips). */
 export function formatTranscript(messages) {
   return messages
     .filter((m) => m.content && m.content !== "…")
     .slice(-12)
-    .map((m) => `${m.initial} — ${clipLine(m.content, 200)}`)
+    .map((m) => `${m.initial}: ${clipLine(m.content, 200)}`)
     .join("\n");
 }
 

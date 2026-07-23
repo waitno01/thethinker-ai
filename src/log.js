@@ -42,8 +42,9 @@ const AGENT_COLORS = [
 
 export function agentColor(initial) {
   if (!initial || initial === "?") return c.gray;
-  const idx = (String(initial).toUpperCase().charCodeAt(0) - 65) % AGENT_COLORS.length;
-  return AGENT_COLORS[idx < 0 ? 0 : idx];
+  let hash = 0;
+  for (const ch of String(initial)) hash = (hash + ch.charCodeAt(0) * 17) % AGENT_COLORS.length;
+  return AGENT_COLORS[hash];
 }
 
 function stamp() {
