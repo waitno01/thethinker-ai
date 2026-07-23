@@ -2,6 +2,7 @@ import express from "express";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "./config.js";
+import { log } from "./log.js";
 import {
   loadState,
   readAllMessages,
@@ -185,7 +186,7 @@ function getDashboardHtml() {
 
 export function startServer() {
   app.listen(config.port, () => {
-    console.log(`Review dashboard → http://localhost:${config.port}`);
+    log.dashboard(`http://localhost:${config.port}`);
   });
 }
 

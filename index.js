@@ -1,28 +1,27 @@
 import { runLoop, stop } from "./src/orchestrator.js";
 import { startServer } from "./src/server.js";
 import { config } from "./src/config.js";
+import { log } from "./src/log.js";
 
 const once = process.argv.includes("--once");
 
 const modelList = config.agentModels.map((m) => m.split("/").pop()).join(", ");
 
-console.log(`
-╔══════════════════════════════════════════╗
-║           🧠  T H E  T H I N K E R       ║
-║  ${config.agentCount} agents · OpenRouter · ${config.turnDelayMs}ms/turn
-║  ${modelList.slice(0, 42)}${modelList.length > 42 ? "…" : ""}
-╚══════════════════════════════════════════╝
-`);
+log.banner({
+  agentCount: config.agentCount,
+  turnDelayMs: config.turnDelayMs,
+  models: modelList,
+});
 
 startServer();
 
 process.on("SIGINT", () => {
-  console.log("\nShutting down…");
+  log.shutdown();
   stop();
   process.exit(0);
 });
 
 runLoop({ once }).catch((err) => {
-  console.error(err);
+  log.error(err.message || String(err));
   process.exit(1);
 });

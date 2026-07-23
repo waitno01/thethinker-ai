@@ -8,8 +8,8 @@ import {
 } from "./agents.js";
 import { getOpenRouterClient } from "./openrouter.js";
 
-const MECHANICAL = `You are one voice in a chain of short thoughts.
-Write exactly one sentence that continues the previous line.
+const MECHANICAL = `You are one voice in a chain of thoughts.
+Continue the previous line in 1–3 short sentences.
 Do not analyze, review, explain, or comment on the conversation.
 Do not mention other speakers, letters, models, or that something was said.
 No markdown, no lists, no headers.`;

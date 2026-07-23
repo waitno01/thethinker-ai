@@ -140,13 +140,23 @@ export function extractCompletion(raw, ownInitial) {
   const next = s.search(/\s[A-Z]\s*[—–:-]\s/);
   if (next > 0) s = s.slice(0, next).trim();
 
-  const sentence = s.match(/^[\s\S]*?[.!?](?=\s|$)/);
-  s = sentence ? sentence[0].trim() : s.split(/\s+/).slice(0, 18).join(" ").trim();
+  // Keep up to 3 sentences (or whatever fits under maxReplyChars)
+  const sentences = [];
+  const re = /[^.!?]+[.!?]+/g;
+  let m;
+  while ((m = re.exec(s)) !== null && sentences.length < 3) {
+    sentences.push(m[0].trim());
+  }
+  if (sentences.length) {
+    s = sentences.join(" ");
+  } else {
+    s = s.split(/\s+/).slice(0, 60).join(" ").trim();
+  }
 
   if (s.length > config.maxReplyChars) {
     const cut = s.slice(0, config.maxReplyChars);
     const sp = cut.lastIndexOf(" ");
-    s = (sp > 20 ? cut.slice(0, sp) : cut).trim();
+    s = (sp > 40 ? cut.slice(0, sp) : cut).trim();
     if (!/[.!?]$/.test(s)) s += ".";
   }
 
